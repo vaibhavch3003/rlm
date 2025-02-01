@@ -1,7 +1,7 @@
 streamlit
 google-generativeai
 SpeechRecognition
-pydub
-whisper
+torch
+
 gtts
 pyaudio
