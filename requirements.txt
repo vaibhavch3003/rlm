@@ -1,6 +1,5 @@
 streamlit
-sounddevice
+google.generaativeai
 numpy
 scipy
-SpeechRecognition
-portaudio
+
