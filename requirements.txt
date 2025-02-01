@@ -1,6 +1,5 @@
 streamlit
-google.generaativeai
+
 gtts
 torch
-transformers
 
