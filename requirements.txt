@@ -4,4 +4,4 @@ SpeechRecognition
 torch
 
 gtts
-pyaudio
+pyaudio==0.2.11 
