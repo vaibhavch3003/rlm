@@ -3,3 +3,4 @@ google-generativeai==0.1.0
 SpeechRecognition==3.10.0
 sounddevice==0.4.6
 pydub==0.25.1
+whisper
