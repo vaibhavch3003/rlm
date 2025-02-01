@@ -5,4 +5,4 @@ transformers
 gtts
 SpeechRecognition
 google.generativeai
-pyaudio
+Pyaudio
