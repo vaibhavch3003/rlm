@@ -1,5 +1,6 @@
 streamlit
 google.generaativeai
-numpy
-scipy
+gtts
+torch
+transformers
 
