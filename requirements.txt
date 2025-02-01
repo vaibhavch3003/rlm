@@ -3,3 +3,4 @@ whisper
 torch
 transformers
 gtts
+SpeechRecognition
