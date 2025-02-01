@@ -1,10 +1,14 @@
 import streamlit as st
+import sounddevice as sd
+import numpy as np
+import scipy.io.wavfile as wav
 import speech_recognition as sr
 from models.imnci_llm import classify_symptoms  # Import function from imnci_llm.py
+import tempfile
 
 # Streamlit UI Setup
 st.set_page_config(page_title="IMNCI AI Assistant", layout="wide")
-st.title("👶 IMNCI AI Assistant for ANM / Field worker")
+st.title("👶 IMNCI AI Assistant for ANM / Field Worker")
 
 st.write("""
 ### 🏥 Voice-Assisted IMNCI Classification
@@ -15,46 +19,54 @@ Simply **speak** or **type** the newborn's symptoms, and our AI will provide a s
 if "symptoms_text" not in st.session_state:
     st.session_state["symptoms_text"] = ""
 
-# Function to record voice input
+# Function to record audio using sounddevice
+def record_audio(duration=5, fs=44100):
+    st.info(f"🎙 Recording for {duration} seconds...")
+    recording = sd.rec(int(duration * fs), samplerate=fs, channels=1, dtype='int16')
+    sd.wait()  # Wait until recording is finished
+    return recording, fs
+
+# Function to convert recorded audio to text using SpeechRecognition
 def get_voice_input():
+    recording, fs = record_audio()
+    
+    # Save recording to a temporary WAV file
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as temp_wav:
+        wav.write(temp_wav.name, fs, recording)
+        temp_wav_path = temp_wav.name
+
     recognizer = sr.Recognizer()
-    with sr.Microphone() as source:
-        st.info("🎙️ Speak Now...")
-        recognizer.adjust_for_ambient_noise(source)
-        audio = recognizer.listen(source)
+    with sr.AudioFile(temp_wav_path) as source:
+        audio_data = recognizer.record(source)
+        try:
+            st.success("✅ Voice input recorded successfully!")
+            text = recognizer.recognize_google(audio_data)
+            st.session_state["symptoms_text"] = text
+        except sr.UnknownValueError:
+            st.error("❌ Could not understand the audio. Please try again.")
+        except sr.RequestError:
+            st.error("❌ Could not request results from the speech recognition service.")
 
-    try:
-        text = recognizer.recognize_google(audio)
-        st.session_state["symptoms_text"] = text  # Store voice input in session state
-        st.success(f"🗣️ You said: {text}")
-    except sr.UnknownValueError:
-        st.error("❌ Sorry, could not understand the audio.")
-    except sr.RequestError:
-        st.error("❌ Could not request results from Google Speech API.")
+# User Input Section
+st.subheader("🗣 Speak or 📝 Type Symptoms")
 
-# User input section
-col1, col2 = st.columns([3, 2])
+col1, col2 = st.columns(2)
 
 with col1:
-    # Use `value=` instead of `key=`
-    symptoms_text = st.text_area("✍️ Enter Symptoms (or use voice input)", 
-                                 value=st.session_state["symptoms_text"], 
-                                 height=150)  
-
-    if st.button("🎙️ Use Voice Input"):
-        get_voice_input()  # Capture voice input and update session state
-        st.rerun()  # Force a rerun so the UI updates with the new voice text
-
-    if st.button("🩺 Analyze Symptoms"):
-        if symptoms_text:
-            result = classify_symptoms(symptoms_text)
-            st.subheader("📋 IMNCI Classification & Treatment Plan")
-            st.markdown(result, unsafe_allow_html=True)
-        else:
-            st.warning("⚠️ Please enter symptoms before analyzing.")
+    if st.button("🎙 Record Symptoms"):
+        get_voice_input()
 
 with col2:
-    st.image("assets/nurse_assistant.png", use_column_width=True)
+    symptoms_input = st.text_area("Or type the symptoms here:", value=st.session_state["symptoms_text"])
 
-st.markdown("---")
-st.write("🤖 Powered by Google Gemini AI | 🔬 Based on WHO's IMNCI Guidelines")
+# Process Symptoms and Display IMNCI Chart
+if st.button("🔍 Analyze Symptoms"):
+    if symptoms_input.strip() == "":
+        st.warning("⚠️ Please provide symptoms via voice or text.")
+    else:
+        with st.spinner("Analyzing symptoms..."):
+            result = classify_symptoms(symptoms_input)
+            st.success("✅ Symptoms classified successfully!")
+            st.write("### IMNCI Classification & Treatment Plan:")
+            st.json(result)
+
